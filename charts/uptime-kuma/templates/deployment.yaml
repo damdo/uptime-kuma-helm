@@ -48,7 +48,7 @@ spec:
           volumeMounts:
             - mountPath: /app/data
               name: storage
-          {{ end }}
+          {{- end }}
           {{ if .Values.livenessProbe.enabled -}}
           livenessProbe:
             exec:
@@ -56,17 +56,50 @@ spec:
                 - extra/healthcheck
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds}}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds}}
-          {{ end }}  
-          {{ if .Values.readinessProbe.enabled -}}  
+          {{- end }}
+          {{ if .Values.readinessProbe.enabled -}}
           readinessProbe:
             httpGet:
               path: /
               port: 3001
               scheme: HTTP
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds}}
-          {{ end }}  
+          {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12  }}
+        {{ if .Values.apiSidecar.enabled -}}
+        - name: {{ .Values.apiSidecar.name }}
+          image: "{{- .Values.apiSidecar.image.repository }}:{{- .Values.apiSidecar.image.tag }}"
+          imagePullPolicy: {{ .Values.apiSidecar.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.apiSidecar.securityContext | nindent 12 }}
+          env:
+          {{- range .Values.apiSidecar.podEnv }}
+            - name: {{ .name }}
+              value: {{ required "A value must be entered for this apiSidecar.podEnv entry" .value }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apiSidecar.port}}
+              protocol: TCP
+          {{ if .Values.apiSidecar.livenessProbe.enabled -}}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.apiSidecar.port}}
+            timeoutSeconds: {{ .Values.apiSidecar.livenessProbe.timeoutSeconds}}
+            initialDelaySeconds: {{ .Values.apiSidecar.livenessProbe.initialDelaySeconds}}
+          {{- end }}
+          {{ if .Values.apiSidecar.readinessProbe.enabled -}}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.apiSidecar.port}}
+              scheme: HTTP
+            initialDelaySeconds: {{ .Values.apiSidecar.readinessProbe.initialDelaySeconds}}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.apiSidecar.resources | nindent 12 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -83,7 +116,7 @@ spec:
       volumes:
       - name: storage
         persistentVolumeClaim:
-          {{- if not .Values.volume.existingClaim }}   
+          {{- if not .Values.volume.existingClaim }}
           claimName: {{ include "uptime-kuma.fullname" . }}-pvc
           {{- else }}
           claimName: {{ .Values.volume.existingClaim }}

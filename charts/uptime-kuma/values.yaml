@@ -122,3 +122,31 @@ volume:
 
 strategy:
   type: Recreate
+
+apiSidecar:
+  enabled: false
+  name: api
+  port: 3002
+  image:
+    repository: medaziz11/uptimekuma_restapi
+    pullPolicy: IfNotPresent
+    tag: "v1.2.1"
+  podEnv:
+    - name: "KUMA_SERVER"
+      value: http://localhost:3001
+    - name: "KUMA_USERNAME"
+      value: null
+    - name: "KUMA_PASSWORD"
+      value: null
+    - name: "ADMIN_PASSWORD"
+      value: null
+  livenessProbe:
+    enabled: true
+    timeoutSeconds: 2
+    initialDelaySeconds: 15
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+  resources: {}
+  securityContext: {}
+
